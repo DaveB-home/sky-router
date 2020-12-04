@@ -6,6 +6,7 @@ from sys import platform
 
 import time
 import argparse
+import ctypes
 
 import sky_router_data
 import utils
@@ -46,6 +47,11 @@ def main():
     parser.add_argument('-m',   action='store_true', help='monitor changes in line status')
     args = parser.parse_args()
 
+    # If on Windows set the console to accept ANSI control seq
+    if platform == "win32":
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+
     # Open connection to the router
     router_status = sky_router_data.RouterStatus()
     if not router_status.open_connection():
@@ -64,10 +70,6 @@ def main():
         display_attached_devices(router_status.get_attached_devices())
 
     if args.m:
-        if platform == "win32":
-            print("Option not supported on Windows")
-            quit()
-
         last_down_speed = int(0)
         last_up_speed = int(0)
         last_connected_date = datetime.min
@@ -75,6 +77,7 @@ def main():
 
         display_helper = utils.DisplayHelper()
 
+        print()
         while True:
             # Get router status
             if not have_connection:

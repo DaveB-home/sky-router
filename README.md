@@ -7,8 +7,6 @@ To help track down the problem I developed this project to allow me to extract i
 A simple monitoring script was used to alert me in real time to issues with the connection. 
 
 ## Release Notes
-* The monitor (-m) does not work on Windows
-* There are a number of display issues on Windows because the ANSII terminal display strings are not supported
 * The default Sky router username and password are embedded into the classes (see get_router_data.py)
 * Generally the class structure needs tidying
 * This is the first version of the project
