@@ -1,12 +1,12 @@
 # sky-router
-Set of Python class to read data from a sky router.
+Set of Python classes to read data from a sky router.
 
 ## Why?
 After moving my broadband to Sky the connection because very unstable. 
 To help track down the problem I developed this project to allow me to extract information from the router. 
 A simple monitoring script was used to alert me in real time to issues with the connection. 
 
-##Release Notes
+## Release Notes
 * The monitor (-m) does not work on Windows
 * There are a number of display issues on Windows because the ANSII terminal display strings are not supported
 * The default Sky router username and password are embedded into the classes (see get_router_data.py)
