@@ -6,24 +6,32 @@ from datetime import timedelta
 
 import re
 
+SKY_DEFAULT_URL = "http://192.168.0.1"
+SKY_DEFAULT_UM = "admin"
+SKY_DEFAULT_PW = "sky"
+
 
 class RouterReadPages:
     """Help class to open connection to router and read pages"""
-    def __init__(self):
+    def __init__(self, 
+                 top_level_url: str = SKY_DEFAULT_URL,
+                 username: str = SKY_DEFAULT_UM,
+                 password: str = SKY_DEFAULT_PW):
         self.opener = None
-        self.top_level_url = None
-
-    def open_connection(self, top_level_url: str = "http://192.168.0.1",
-                        username: str = "admin",
-                        password: str = "sky") -> bool:
-        """Open connection to the sky router using default username and password"""
         self.top_level_url = top_level_url + "/"
+        self.username = username
+        self.password = password
 
+    def open_connection(self) -> bool:
+        """Open connection to the sky router using default username and password"""
+        if self.opener is not None:
+            return True  # Already have connection
+        
         try:
             password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
 
             # Add the username and password.
-            password_mgr.add_password(None, top_level_url, username, password)
+            password_mgr.add_password(None, self.top_level_url, self.username, self.password)
             handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
 
             # create "opener" (OpenerDirector instance)
@@ -31,6 +39,9 @@ class RouterReadPages:
             return True
         except:
             return False
+            
+    def close_connection(self):
+        self.opener = None  # Shut connection
 
     def have_connection(self) -> bool:
         return self.opener is not None
@@ -43,6 +54,7 @@ class RouterReadPages:
             page_source = page_data.splitlines()
             response.close()
         except:
+            self.close_connection()
             return list()
 
         return page_source
@@ -50,11 +62,12 @@ class RouterReadPages:
 
 class RouterSystemDetail:
     """parse system details out of status page"""
-    def __init__(self):
+    def __init__(self, page_reader: RouterReadPages):
         self.system_details = dict()
+        self.page_reader = page_reader
 
-    def parse_page(self, page_reader: RouterReadPages) -> dict:
-        page_source = page_reader.read_page("sky_router_status.html")
+    def get_data(self) -> dict:
+        page_source = self.page_reader.read_page("sky_router_status.html")
 
         if page_source is None:
             return dict()
@@ -83,12 +96,13 @@ class RouterSystemDetail:
 
 class RouterAttachedDevices:
     """parse data from the attached devices page """
-    def __init__(self):
+    def __init__(self, page_reader: RouterReadPages):
         self.attached_devices = None
+        self.page_reader = page_reader
 
-    def parse_page(self, page_reader: RouterReadPages) -> dict:
+    def get_data(self) -> dict:
         """ read and extract data from page"""
-        page_source = page_reader.read_page("sky_attached_devices.html")
+        page_source = self.page_reader.read_page("sky_attached_devices.html")
 
         if page_source is None:
             self.attached_devices = None
@@ -124,22 +138,20 @@ class RouterAttachedDevices:
 
 class RouterLineStats:
     """parse data from the system.html router statistics page"""
-    def __init__(self):
-        self.connected = False
-        self.connect_time_sec = 0
-        self.date_connected = datetime.min
+    def __init__(self, page_reader: RouterReadPages):
+        self.page_reader = page_reader
         self.line_stats = dict()
 
-    def parse_page(self, page_reader: RouterReadPages) -> bool:
+    def get_data(self) -> dict:
         """ parse the router pages to extract status"""
-        if self.parse_system_html(page_reader) and self.parse_sky_st_poe_html(page_reader):
-            return True
+        if self.parse_system_html() and self.parse_sky_st_poe_html():
+            return self.line_stats
 
-        return False
+        return dict()
 
-    def parse_sky_st_poe_html(self, page_reader: RouterReadPages) -> bool:
+    def parse_sky_st_poe_html(self) -> bool:
         """ read and extract data from the connection status page"""
-        page_source = page_reader.read_page("sky_st_poe.html")
+        page_source = self.page_reader.read_page("sky_st_poe.html")
 
         if page_source is None:
             return False
@@ -152,20 +164,24 @@ class RouterLineStats:
                     wan_status = page_line.split("_")
 
                     time_elements = wan_status[11].split(":")
-                    self.connect_time_sec = (int(time_elements[0]) * 60 * 60) +\
-                                            (int(time_elements[1]) * 60) +\
-                                            int(time_elements[2])
+                    connect_time_sec = (int(time_elements[0]) * 60 * 60) +\
+                                       (int(time_elements[1]) * 60) +\
+                                        int(time_elements[2])
 
-                    self.date_connected = datetime.now() - timedelta(seconds=self.connect_time_sec)
+                    date_connected = datetime.now() - timedelta(seconds=connect_time_sec)
+                    
+                    self.line_stats["connect_dur_sec"] = connect_time_sec
+                    self.line_stats["connect_datetime"] = date_connected
+                    
                     found_data = True
         except IndexError:
             found_data = False
 
         return found_data
 
-    def parse_system_html(self, page_reader: RouterReadPages) -> bool:
+    def parse_system_html(self) -> bool:
         """ read and extract data from the show statistics page"""
-        page_source = page_reader.read_page("sky_system.html")
+        page_source = self.page_reader.read_page("sky_system.html")
 
         if page_source is None:
             return False
@@ -206,35 +222,3 @@ class RouterLineStats:
 
         except IndexError:
             return False
-
-
-class RouterStatus:
-    """Connect to the sky router and extract connection information"""
-    def __init__(self):
-        self.system_details = RouterSystemDetail()
-        self.line_stats = RouterLineStats()
-        self.attached_devices = RouterAttachedDevices()
-        self.page_reader = RouterReadPages()
-
-    def open_connection(self) -> bool:
-        """Open connection to the sky router using default username and password"""
-        return self.page_reader.open_connection()
-
-    def get_system_details(self) -> dict:
-        return self.system_details.parse_page(self.page_reader)
-
-    def get_line_status(self) -> bool:
-        return self.line_stats.parse_page(self.page_reader)
-
-    def get_attached_devices(self) -> dict:
-        return self.attached_devices.parse_page(self.page_reader)
-
-    def reload_status(self) -> bool:
-        """Extract connection data from router web page"""
-        if not self.line_stats.parse_page(self.page_reader):
-            return False
-
-        if not self.attached_devices.parse_page(self.page_reader):
-            return False
-
-        return True

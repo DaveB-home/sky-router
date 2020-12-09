@@ -4,13 +4,11 @@ Set of Python classes to read data from a sky router.
 ## Why?
 After moving my broadband to Sky the connection because very unstable. 
 To help track down the problem I developed this project to allow me to extract information from the router. 
-A simple monitoring script was used to alert me in real time to issues with the connection. 
+A simple monitoring script was used to alert me in real time of issues with the connection. 
 
 ## Release Notes
 * The default Sky router username and password are embedded into the classes (see get_router_data.py)
-* Generally the class structure needs tidying
-* This is the first version of the project
-* README.MD is missing information
+* Code is not yet robust to router errors with in monitor mode
 
 ## Installation 
 This project is pure Python and was developed on Python 3.8. It is recommended that you use this version or above. 
@@ -36,15 +34,14 @@ It has been tested on Ubuntu 18.04/20.04 LTS and Windows 10 (19042.662)
 
 #### Install with git
 open the terminal or command line prompt depending on O/S being used
-* Change the directory to the location to install the project
-* git clone https://github.com/DaveB-home/sky-router.git
-* cd sky-router
+1 Change the directory to the location to install the project
+1 git clone https://github.com/DaveB-home/sky-router.git
+1 cd sky-router
 
 #### Install via github website
+1 Click the green code button at the top of the page
+1 Select "Download ZIP"
+1 unzip files
 
-## Current Functionality
 
-## Usage 
 
-## License
-Code is released under MIT License 
